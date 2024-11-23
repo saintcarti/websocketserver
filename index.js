@@ -50,13 +50,18 @@ io.on('connection', (socket) => {
   console.log('Un cliente se ha conectado');
 
   // Enviar eventos actuales al cliente cuando se conecta
-  obtenerEventosDesdeApi().then((eventos) => {
-    socket.emit('evento-actualizado', eventos);
-  });
+    obtenerEventosDesdeApi().then((eventos) => {
+        socket.emit('evento-actualizado', eventos);
+    });
 
-  obtenerUsuariosDesdeApi().then((usuarios)=>{
-    socket.emit('usuario-actualizado',usuarios);
-  });
+    obtenerUsuariosDesdeApi().then((usuarios)=>{
+        socket.emit('usuario-actualizado',usuarios);
+    });
+
+    obtenerParticipacionDesdeApi().then((participacion)=>{
+        socket.emit('participacion-actualizado',participacion);
+    });
+
 
   // Puedes emitir datos cuando los eventos cambian o son actualizados
   setInterval(() => {
@@ -70,6 +75,12 @@ io.on('connection', (socket) => {
         io.emit('usuario-actualizado',usuarios);
     });
   },3000);
+
+  setInterval(()=>{
+    obtenerParticipacionDesdeApi().then((participacion)=>{
+        io.emit('participacion-actualizado',participacion);
+    })
+  })
 
   socket.on('disconnect', () => {
     console.log('Un cliente se ha desconectado');
