@@ -39,7 +39,7 @@ io.on('connection', (socket) => {
     obtenerEventosDesdeApi().then((eventos) => {
       io.emit('evento-actualizado', eventos); // Emitir evento actualizado a todos los clientes
     });
-  }, 10000); // Actualizar cada 5 segundos (por ejemplo)
+  }, 3000); // Actualizar cada 5 segundos (por ejemplo)
 
   socket.on('disconnect', () => {
     console.log('Un cliente se ha desconectado');
