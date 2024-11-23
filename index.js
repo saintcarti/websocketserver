@@ -5,7 +5,14 @@ const axios = require('axios');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = require('socket.io')(server,{
+    cors:{
+        origin:"http://localhost:8100",
+        methods:["GET","POST"],
+        allowedHeaders:["Content-Type"],
+        credentials:true
+    }
+});
 
 // Función para hacer una petición HTTP al servicio REST y obtener eventos
 async function obtenerEventosDesdeApi() {
