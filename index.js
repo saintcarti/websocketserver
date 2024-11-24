@@ -6,79 +6,113 @@ const axios = require('axios');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
-  cors: {
-    origin: "http://localhost:8100",  // Permitir el origen de tu aplicación frontend
-    methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type"],
-    credentials: true
-  }
+    cors: {
+        origin: "http://localhost:8100",  // Cambia la URL si es necesario
+        methods: ["GET", "POST"],
+        allowedHeaders: ["Content-Type"],
+        credentials: true
+    }
 });
 
+// Datos en caché para evitar solicitudes repetitivas
 let cachedEventos = [];
 let cachedUsuarios = [];
 let cachedParticipacion = [];
 
-// Función para obtener solo los eventos nuevos
-async function obtenerEventosActualizados() {
+// Inicializar las fechas de última actualización correctamente
+let lastUpdatedEventos = Date.now(); // Usar la fecha actual como valor inicial
+let lastUpdatedUsuarios = Date.now(); // Usar la fecha actual como valor inicial
+let lastUpdatedParticipacion = Date.now(); // Usar la fecha actual como valor inicial
+
+// Funciones para obtener datos con caché y basadas en la fecha de la última actualización
+async function obtenerEventosDesdeApi() {
+  const startTime = Date.now();
   try {
     const respuesta = await axios.get('https://repojson-zdrg.onrender.com/events');
-    const eventosActualizados = respuesta.data.filter(evento => evento.updatedAt > lastUpdatedEventos);
-    cachedEventos = eventosActualizados;
-    return eventosActualizados;
+    const endTime = Date.now();
+    console.log(`Tiempo de respuesta de la API: ${endTime - startTime}ms`);
+    cachedEventos = respuesta.data;
+    lastUpdatedEventos = Date.now(); // Actualizar la última fecha de actualización al obtener nuevos datos
   } catch (error) {
     console.error('Error al obtener los eventos:', error);
   }
-  return [];
+  return cachedEventos;
 }
 
-// Función similar para usuarios y participación...
-async function obtenerUsuariosActualizados(lastUpdateTime) {
-  try {
-    const respuesta = await axios.get('https://repojson-zdrg.onrender.com/usuarios');
-    const usuariosActualizados = respuesta.data.filter(usuario => usuario.updatedAt > lastUpdateTime);
-    cachedUsuarios = usuariosActualizados;
-    return usuariosActualizados;
-  } catch (error) {
-    console.error('Error al obtener los usuarios:', error);
-    return [];
-  }
+async function obtenerUsuariosDesdeApi(lastUpdateTime) {
+    try {
+        const respuesta = await axios.get('https://repojson-zdrg.onrender.com/usuarios');
+        const usuariosActualizados = respuesta.data.filter(usuario => usuario.updatedAt > lastUpdateTime); // Filtramos los usuarios actualizados
+        cachedUsuarios = usuariosActualizados;
+        return usuariosActualizados;
+    } catch (error) {
+        console.error('Error al obtener los usuarios:', error);
+        return [];
+    }
 }
 
-async function obtenerParticipacionActualizada(lastUpdateTime) {
-  try {
-    const respuesta = await axios.get('https://repojson-zdrg.onrender.com/Participacion');
-    const participacionActualizada = respuesta.data.filter(participacion => participacion.updatedAt > lastUpdateTime);
-    cachedParticipacion = participacionActualizada;
-    return participacionActualizada;
-  } catch (error) {
-    console.error('Error al obtener la participación:', error);
-    return [];
-  }
+async function obtenerParticipacionDesdeApi(lastUpdateTime) {
+    try {
+        const respuesta = await axios.get('https://repojson-zdrg.onrender.com/Participacion');
+        const participacionActualizada = respuesta.data.filter(participacion => participacion.updatedAt > lastUpdateTime); // Filtramos la participación actualizada
+        cachedParticipacion = participacionActualizada;
+        return participacionActualizada;
+    } catch (error) {
+        console.error('Error al obtener la participación:', error);
+        return [];
+    }
 }
 
-// Emitir actualizaciones solo cuando haya cambios
+// Cuando un cliente se conecta
 io.on('connection', (socket) => {
-  console.log('Un cliente se ha conectado');
+    console.log('Un cliente se ha conectado');
 
-  // Enviar los datos actuales cuando el cliente se conecta
-  socket.emit('datos-iniciales', { eventos: cachedEventos, usuarios: cachedUsuarios, participacion: cachedParticipacion });
+    // Recibir la fecha de la última actualización desde el cliente
+    socket.on('obtenerDatosActualizados', (lastUpdateTime) => {
+        Promise.all([
+            obtenerEventosDesdeApi(lastUpdateTime),
+            obtenerUsuariosDesdeApi(lastUpdateTime),
+            obtenerParticipacionDesdeApi(lastUpdateTime)
+        ]).then(([eventos, usuarios, participacion]) => {
+            socket.emit('datos-iniciales', { eventos, usuarios, participacion });
+        });
+    });
 
-  // Recibir la fecha de la última actualización desde el cliente
-  socket.on('obtenerDatosActualizados', async (lastUpdateTime) => {
-    const eventos = await obtenerEventosActualizados(lastUpdateTime);
-    const usuarios = await obtenerUsuariosActualizados(lastUpdateTime);
-    const participacion = await obtenerParticipacionActualizada(lastUpdateTime);
+    // Actualizar datos periódicamente solo cuando haya cambios (según el último timestamp)
+    setInterval(() => {
+        obtenerEventosDesdeApi(lastUpdatedEventos).then(eventos => {
+            if (eventos.length > 0) {
+                io.emit('evento-actualizado', eventos);
+                lastUpdatedEventos = Date.now(); // Actualizar la fecha de la última actualización
+            }
+        });
+    }, 5000); // Cada 5 segundos
 
-    // Enviar solo los datos actualizados
-    socket.emit('datos-actualizados', { eventos, usuarios, participacion });
-  });
+    setInterval(() => {
+        obtenerUsuariosDesdeApi(lastUpdatedUsuarios).then(usuarios => {
+            if (usuarios.length > 0) {
+                io.emit('usuario-actualizado', usuarios);
+                lastUpdatedUsuarios = Date.now(); // Actualizar la fecha de la última actualización
+            }
+        });
+    }, 5000); // Cada 5 segundos
 
-  socket.on('disconnect', () => {
-    console.log('Un cliente se ha desconectado');
-  });
+    setInterval(() => {
+        obtenerParticipacionDesdeApi(lastUpdatedParticipacion).then(participacion => {
+            if (participacion.length > 0) {
+                io.emit('participacion-actualizado', participacion);
+                lastUpdatedParticipacion = Date.now(); // Actualizar la fecha de la última actualización
+            }
+        });
+    }, 5000); // Cada 5 segundos
+
+    socket.on('disconnect', () => {
+        console.log('Un cliente se ha desconectado');
+    });
 });
 
-const port = process.env.PORT || 3000;
+// Iniciar el servidor WebSocket
+const port = process.env.PORT || 10000;
 server.listen(port, () => {
-  console.log(`Servidor WebSocket escuchando en puerto ${port}`);
+    console.log(`Servidor WebSocket escuchando en puerto ${port}`);
 });
