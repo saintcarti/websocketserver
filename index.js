@@ -5,7 +5,14 @@ const axios = require('axios');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+  cors: {
+    origin: "http://localhost:8100",  // Permitir el origen de tu aplicación frontend
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
+    credentials: true
+  }
+});
 
 let cachedEventos = [];
 let cachedUsuarios = [];
