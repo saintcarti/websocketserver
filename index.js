@@ -87,7 +87,7 @@ io.on('connection', (socket) => {
                 lastUpdatedEventos = Date.now(); // Actualizar la fecha de la última actualización
             }
         });
-    }, 30000); // Cada 30 segundos
+    }, 5000); // Cada 30 segundos
 
     setInterval(() => {
         obtenerUsuariosDesdeApi(lastUpdatedUsuarios).then(usuarios => {
@@ -96,7 +96,7 @@ io.on('connection', (socket) => {
                 lastUpdatedUsuarios = Date.now(); // Actualizar la fecha de la última actualización
             }
         });
-    }, 30000); // Cada 30 segundos
+    }, 5000); // Cada 30 segundos
 
     setInterval(() => {
         obtenerParticipacionDesdeApi(lastUpdatedParticipacion).then(participacion => {
@@ -105,7 +105,7 @@ io.on('connection', (socket) => {
                 lastUpdatedParticipacion = Date.now(); // Actualizar la fecha de la última actualización
             }
         });
-    }, 30000); // Cada 30 segundos
+    }, 5000); // Cada 30 segundos
 
     socket.on('disconnect', () => {
         console.log('Un cliente se ha desconectado');
