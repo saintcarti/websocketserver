@@ -1,3 +1,20 @@
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
+const axios = require('axios');
+
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+    cors: {
+        origin: "http://localhost:8100",  // Cambia la URL si es necesario
+        methods: ["GET", "POST"],
+        allowedHeaders: ["Content-Type"],
+        credentials: true
+    }
+});
+
+// Datos en caché para evitar solicitudes repetitivas
 // Datos en caché con fecha de última actualización
 let cachedEventos = [];
 let cachedUsuarios = [];
