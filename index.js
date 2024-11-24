@@ -25,17 +25,20 @@ let lastUpdatedUsuarios = 0;
 let lastUpdatedParticipacion = 0;
 
 // Funciones para obtener datos con caché y basadas en la fecha de la última actualización
-async function obtenerEventosDesdeApi(lastUpdateTime) {
-    try {
-        const respuesta = await axios.get('https://repojson-zdrg.onrender.com/events');
-        const eventosActualizados = respuesta.data.filter(evento => evento.updatedAt > lastUpdateTime); // Filtramos los eventos actualizados
-        cachedEventos = eventosActualizados;
-        return eventosActualizados;
-    } catch (error) {
-        console.error('Error al obtener los eventos:', error);
-        return [];
-    }
+async function obtenerEventosDesdeApi() {
+  const startTime = Date.now();
+  try {
+    const respuesta = await axios.get('https://repojson-zdrg.onrender.com/events');
+    const endTime = Date.now();
+    console.log(`Tiempo de respuesta de la API: ${endTime - startTime}ms`);
+    cachedEventos = respuesta.data;
+    lastUpdatedEventos = Date.now();
+  } catch (error) {
+    console.error('Error al obtener los eventos:', error);
+  }
+  return cachedEventos;
 }
+
 
 async function obtenerUsuariosDesdeApi(lastUpdateTime) {
     try {
