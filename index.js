@@ -14,36 +14,58 @@ const io = require('socket.io')(server,{
     }
 });
 
-// Función para hacer una petición HTTP al servicio REST y obtener eventos
+let cachedEventos = [];
+let cachedUsuarios = [];
+let cachedParticipacion = [];
+
+let lastUpdatedEventos = 0;
+let lastUpdatedUsuarios = 0;
+let lastUpdatedParticipacion = 0;
+
+// Función para verificar si se necesita actualizar los datos
 async function obtenerEventosDesdeApi() {
-  try {
-    const respuesta = await axios.get('https://repojson-zdrg.onrender.com/events');
-    return respuesta.data;
-  } catch (error) {
-    console.error('Error al obtener los eventos:', error);
-    return [];
+  const now = Date.now();
+  // Actualizar solo si han pasado más de 1 minuto (60000 ms)
+  if (now - lastUpdatedEventos > 60000) {
+    try {
+      const respuesta = await axios.get('https://repojson-zdrg.onrender.com/events');
+      cachedEventos = respuesta.data;
+      lastUpdatedEventos = now;
+    } catch (error) {
+      console.error('Error al obtener los eventos:', error);
+    }
   }
+  return cachedEventos;
 }
 
-async function obtenerUsuariosDesdeApi(){
-    try{
-        const respuesta = await axios.get('https://repojson-zdrg.onrender.com/usuarios');
-        return respuesta.data;
-    }catch(error){
-        console.error('Error al obtener los usuarios:',error);
-        return [];
+async function obtenerUsuariosDesdeApi() {
+  const now = Date.now();
+  if (now - lastUpdatedUsuarios > 60000) {
+    try {
+      const respuesta = await axios.get('https://repojson-zdrg.onrender.com/usuarios');
+      cachedUsuarios = respuesta.data;
+      lastUpdatedUsuarios = now;
+    } catch (error) {
+      console.error('Error al obtener los usuarios:', error);
     }
+  }
+  return cachedUsuarios;
 }
 
-async function obtenerParticipacionDesdeApi(){
-    try{
-        const respuesta = await axios.get('https://repojson-zdrg.onrender.com/Participacion');
-        return respuesta.data;
-    }catch(error){
-        console.error('Error al obtener la participacion:',error);
-        return [];
+async function obtenerParticipacionDesdeApi() {
+  const now = Date.now();
+  if (now - lastUpdatedParticipacion > 60000) {
+    try {
+      const respuesta = await axios.get('https://repojson-zdrg.onrender.com/Participacion');
+      cachedParticipacion = respuesta.data;
+      lastUpdatedParticipacion = now;
+    } catch (error) {
+      console.error('Error al obtener la participación:', error);
     }
+  }
+  return cachedParticipacion;
 }
+
 
 // Cuando un cliente se conecta
 io.on('connection', (socket) => {
@@ -64,23 +86,24 @@ io.on('connection', (socket) => {
 
 
   // Puedes emitir datos cuando los eventos cambian o son actualizados
-  setInterval(() => {
-    obtenerEventosDesdeApi().then((eventos) => {
-      io.emit('evento-actualizado', eventos); // Emitir evento actualizado a todos los clientes
-    });
-  }, 10000); // Actualizar cada 5 segundos (por ejemplo)
+  // Cambiar los intervalos de 10s a, por ejemplo, 30s o 1m
+setInterval(() => {
+  obtenerEventosDesdeApi().then((eventos) => {
+    io.emit('evento-actualizado', eventos);
+  });
+}, 30000); // Actualizar cada 30 segundos (ajusta según sea necesario)
 
-  setInterval(()=>{
-    obtenerUsuariosDesdeApi().then((usuarios)=>{
-        io.emit('usuario-actualizado',usuarios);
-    });
-  },10000);
+setInterval(() => {
+  obtenerUsuariosDesdeApi().then((usuarios) => {
+    io.emit('usuario-actualizado', usuarios);
+  });
+}, 30000);
 
-  setInterval(()=>{
-    obtenerParticipacionDesdeApi().then((participacion)=>{
-        io.emit('participacion-actualizado',participacion);
-    });
-  },10000)
+setInterval(() => {
+  obtenerParticipacionDesdeApi().then((participacion) => {
+    io.emit('participacion-actualizado', participacion);
+  });
+}, 30000);
 
   socket.on('disconnect', () => {
     console.log('Un cliente se ha desconectado');
