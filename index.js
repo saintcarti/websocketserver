@@ -68,19 +68,19 @@ io.on('connection', (socket) => {
     obtenerEventosDesdeApi().then((eventos) => {
       io.emit('evento-actualizado', eventos); // Emitir evento actualizado a todos los clientes
     });
-  }, 50000); // Actualizar cada 5 segundos (por ejemplo)
+  }, 10000); // Actualizar cada 5 segundos (por ejemplo)
 
   setInterval(()=>{
     obtenerUsuariosDesdeApi().then((usuarios)=>{
         io.emit('usuario-actualizado',usuarios);
     });
-  },50000);
+  },10000);
 
   setInterval(()=>{
     obtenerParticipacionDesdeApi().then((participacion)=>{
         io.emit('participacion-actualizado',participacion);
     });
-  },50000)
+  },10000)
 
   socket.on('disconnect', () => {
     console.log('Un cliente se ha desconectado');
